@@ -45,8 +45,8 @@ def index(path):
 # API endpoint to get item with optional name parameter
 @api.route('/simple-get', methods=['GET'])
 def get_item():
-    name = request.args.get('name', 'default')
-    return jsonify({"name": name})
+   # name = request.args.get('name', 'default')
+    return jsonify({"name": 'Hai'})
 
 
 # Register blueprint

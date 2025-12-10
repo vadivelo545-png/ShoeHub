@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+	
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShoeHub - Premium Shoe Store</title>
     <style>
@@ -145,11 +146,19 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
         
-        .product-image {
-            width: 100%;
-            height: 280px;
-            object-fit: cover;
+        .product-media {
+            height: 240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        .product-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             display: block;
             transition: transform 0.2s ease;
         }
@@ -319,7 +328,7 @@
             {
                 id: 5,
                 name: "Comfort Walking Shoes",
-                image: "/images/Shoe 6.avif?v=" + Date.now(),
+                image: "/images/Shoe 6.jfif?v=" + Date.now(),
                 price: 74.99,
                 description: "Ergonomic design for all-day comfort and support.",
                 category: "casual"
@@ -339,6 +348,22 @@
                 price: 59.99,
                 description: "Easy-to-wear slip-on shoes for quick and convenient styling.",
                 category: "casual"
+            },
+            {
+                id: 8,
+                name: "Casual Black Sneaker with Red Stripes Shoes",
+                image: "/images/Shoe 5.jfif?v=" + Date.now(),
+                price: 89.99,
+                description: "Stylish sneakers ideal for casual everyday wear.",
+                category: "casual"
+            },
+            {
+                id: 9,
+                name: "Limited Edition Shoe",
+                image: "/images/Shoe 9.jfif?v=" + Date.now(),
+                price: 149.99,
+                description: "Limited edition shoe with premium materials and design.",
+                category: "formal"
             }
         ];
         
@@ -356,7 +381,9 @@
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = `
-                    <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22250%22%3E%3Crect fill=%22%23ddd%22 width=%22280%22 height=%22250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 fill=%22%23999%22 text-anchor=%22middle%22 dy=%22.3em%22%3EImage not available%3C/text%3E%3C/svg%3E'">
+                    <div class="product-media">
+                        <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22360%22%3E%3Crect fill=%22%23ddd%22 width=%22600%22 height=%22360%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 fill=%22%23999%22 text-anchor=%22middle%22 dy=%22.3em%22%3EImage not available%3C/text%3E%3C/svg%3E'" />
+                    </div>
                     <div class="product-info">
                         <div class="product-category">${product.category.charAt(0).toUpperCase() + product.category.slice(1)}</div>
                         <div class="product-name">${product.name}</div>

@@ -250,25 +250,31 @@ def get_item():
     return jsonify({"name": 'Hai'})
 
 # ----------------------------
-# (1–4 Combined) Order Change Flow
+# (1–4 Combined) Order Change Flow (Automatic)
 # ----------------------------
 @api.route('/order-change', methods=['POST'])
 def order_change():
     """
-    Handles three stages in a single endpoint:
-    - stage='request'         : membership + availability check, returns confirmation prompt
-    - stage='confirm_color'   : applies color change, asks to confirm shipping
-    - stage='confirm_shipping': confirms address or updates it, returns final comment
+    Automatically handles the complete color change flow in sequence:
+    1. Validates membership & checks color availability
+    2. Applies the color change if available
+    3. Confirms shipping address with the new color
+    
+    Customer only provides: order_id and new_color
+    The API automatically executes all three stages and returns final status.
     """
     data = request.get_json(force=True) or {}
-    stage = (data.get("stage") or "").strip().lower()
     order_id = data.get("order_id")
+    new_color = (data.get("new_color") or "").strip().lower()
+    new_address = data.get("new_address")  # Optional: for address update during change
 
-    if stage not in {"request", "confirm_color", "confirm_shipping"}:
-        return jsonify({"ok": False, "error": "Invalid or missing 'stage'. Use request|confirm_color|confirm_shipping"}), 400
+    # Validate inputs
     if not order_id:
         return jsonify({"ok": False, "error": "order_id is required"}), 400
+    if not new_color:
+        return jsonify({"ok": False, "error": "new_color is required"}), 400
 
+    # Fetch order and shoe
     order = DB["orders"].get(order_id)
     if not order:
         return jsonify({"ok": False, "error": "Order not found"}), 404
@@ -277,94 +283,72 @@ def order_change():
     if not shoe:
         return jsonify({"ok": False, "error": "Shoe not found for this order"}), 404
 
-    # Stage: request -> check membership & availability
-    if stage == "request":
-        preferred_color = (data.get("new_color") or "").lower()
-        if not preferred_color:
-            return jsonify({"ok": False, "error": "new_color is required for stage=request"}), 400
-
-        if not is_golden_member(order["customer_id"]):
-            return jsonify({
-                "ok": False,
-                "message": "Only Golden Membership card holders can change the color after ordering."
-            }), 403
-
-        available = check_availability(order["shoe_id"], preferred_color, order["size"])
-        DB["pending"][order_id] = {
-            "action": "change_color",
-            "new_color": preferred_color,
-            "size": order["size"],
-            "available": available,
-            "created_at": datetime.now().isoformat()
-        }
-
-        availability_text = "available" if available else "not available"
-        message = (
-            f"You are a Golden Membership card holder, so you can change the preferred colour.\n"
-            f"Your order id is {order_id}, and shoe ordered is {shoe['name']}, size is {order['size']}, and its colour is {order['color']}.\n"
-            f"The preferred {preferred_color} colour is {availability_text} in the same size.\n"
-            f"Would you confirm to proceed further?"
-        )
+    # Stage 1: Check membership eligibility
+    if not is_golden_member(order["customer_id"]):
         return jsonify({
-            "ok": True,
-            "requires_confirmation": True,
-            "availability": available,
-            "order_id": order_id,
-            "shoe_id": order["shoe_id"],
-            "size": order["size"],
-            "current_color": order["color"],
-            "preferred_color": preferred_color,
-            "message": message,
-            "next_stage": "confirm_color"
-        })
+            "ok": False,
+            "error": "Only Golden Membership card holders can change the color after ordering.",
+            "customer_id": order["customer_id"],
+            "membership": DB["customers"].get(order["customer_id"], {}).get("membership", "Unknown")
+        }), 403
 
-    # Stage: confirm_color -> apply change then ask shipping confirmation
-    if stage == "confirm_color":
-        new_color = (data.get("new_color") or "").lower()
-        if not new_color:
-            return jsonify({"ok": False, "error": "new_color is required for stage=confirm_color"}), 400
-
-        if not check_availability(order["shoe_id"], new_color, order["size"]):
-            return jsonify({"ok": False, "error": f"{new_color} not available in size {order['size']}"}), 409
-
-        old_color = order["color"]
-        order["color"] = new_color
-        DB["pending"].pop(order_id, None)
-
-        address = order["shipping_address"]
-        message = (
-            f"Colour changed successfully from {old_color} to {new_color}.\n"
-            f"Please confirm the shipping address:\n"
-            f"{address['name']}, {address['line1']}, {address['line2']}, {address['city']}, {address['state']} - {address['pincode']}, {address['phone']}\n"
-            f"If there is any alteration in shipping address, share the updated address now."
-        )
+    # Stage 2: Check color availability
+    if new_color not in shoe["colors"]:
         return jsonify({
-            "ok": True,
-            "order_id": order_id,
-            "new_color": new_color,
-            "requires_shipping_confirmation": True,
-            "current_shipping_address": address,
-            "message": message,
-            "next_stage": "confirm_shipping"
-        })
+            "ok": False,
+            "error": f"Color '{new_color}' is not available for this shoe",
+            "available_colors": shoe["colors"]
+        }), 400
 
-    # Stage: confirm_shipping -> confirm or update address and finalize comment
-    if stage == "confirm_shipping":
-        confirm = data.get("confirm", True)
-        new_address = data.get("new_address")
+    if not check_availability(order["shoe_id"], new_color, order["size"]):
+        return jsonify({
+            "ok": False,
+            "error": f"{new_color} not available in size {order['size']}",
+            "requested_size": order["size"],
+            "requested_color": new_color
+        }), 409
 
-        if confirm and not new_address:
-            message = (
-                f"Colour changed {order['color']} shoe will be delivered to the same address already provided."
-            )
-            return jsonify({"ok": True, "order_id": order_id, "message": message})
+    # Stage 3: Apply the color change
+    old_color = order["color"]
+    order["color"] = new_color
 
-        if new_address and isinstance(new_address, dict):
-            order["shipping_address"] = new_address
-            message = "Shipping address updated successfully. The shoe will be delivered to the new address provided."
-            return jsonify({"ok": True, "order_id": order_id, "new_address": new_address, "message": message})
+    # Stage 4: Handle shipping address
+    current_address = order["shipping_address"]
+    if new_address and isinstance(new_address, dict):
+        # Update with new address if provided
+        order["shipping_address"] = new_address
+        address_status = "updated"
+        final_address = new_address
+    else:
+        # Keep existing address
+        address_status = "confirmed"
+        final_address = current_address
 
-        return jsonify({"ok": False, "error": "Invalid request. Provide confirm=true or a valid new_address."}), 400
+    # Return complete success response
+    message = (
+        f"Color change completed successfully!\n"
+        f"Order ID: {order_id}\n"
+        f"Shoe: {shoe['name']}\n"
+        f"Color changed from {old_color} to {new_color}\n"
+        f"Size: {order['size']}\n"
+        f"Shipping address {address_status}:\n"
+        f"{final_address['name']}, {final_address['line1']}, {final_address['line2']}, "
+        f"{final_address['city']}, {final_address['state']} - {final_address['pincode']}, "
+        f"{final_address['phone']}"
+    )
+
+    return jsonify({
+        "ok": True,
+        "order_id": order_id,
+        "shoe_id": order["shoe_id"],
+        "shoe_name": shoe["name"],
+        "old_color": old_color,
+        "new_color": new_color,
+        "size": order["size"],
+        "address_status": address_status,
+        "shipping_address": final_address,
+        "message": message
+    })
 
 # ----------------------------
 # (5 single) Direct Address Update

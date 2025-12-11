@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShoeHub API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .api-section {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .api-section:last-child {
+            border-bottom: none;
+        }
+
+        .api-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        label {
+            display: block;
+            margin: 8px 0 4px;
+            font-weight: 500;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .response {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #333;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .response.success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .response.error {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 2px;
+            font-size: 0.9em;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 ShoeHub API Testing Console</h1>
+        
+        <div class="content">
+            <!-- Left Panel: Individual API Tests -->
+            <div class="panel">
+                <h2>Individual API Tests</h2>
+
+                <!-- Search Shoes -->
+                <div class="api-section">
+                    <div class="api-title">🔍 Search Shoes</div>
+                    <label>Search Query:</label>
+                    <input type="text" id="searchQuery" placeholder="e.g., AeroRun, Trail" value="Aero">
+                    <button onclick="testSearch()">Search</button>
+                    <div id="searchResponse" class="response"></div>
+                </div>
+
+                <!-- Shoe Details -->
+                <div class="api-section">
+                    <div class="api-title">📋 Get Shoe Details</div>
+                    <label>Shoe ID:</label>
+                    <select id="shoeIdDetails">
+                        <option value="SHOE001">SHOE001 - Classic Running Shoes</option>
+                        <option value="SHOE002">SHOE002 - Urban Casual Sneakers</option>
+                        <option value="SHOE003">SHOE003 - Professional Formal Shoes</option>
+                        <option value="SHOE004">SHOE004 - Athletic Sports Shoes</option>
+                        <option value="SHOE005">SHOE005 - Comfort Walking Shoes</option>
+                        <option value="SHOE006">SHOE006 - Marathon Running Shoes</option>
+                        <option value="SHOE007">SHOE007 - Casual Slip-On Shoes</option>
+                        <option value="SHOE008">SHOE008 - Casual Black Sneaker with Red Stripes</option>
+                        <option value="SHOE009">SHOE009 - Limited Edition Shoe</option>
+                    </select>
+                    <button onclick="testShoeDetails()">Get Details</button>
+                    <div id="detailsResponse" class="response"></div>
+                </div>
+
+                <!-- Compare Shoes -->
+                <div class="api-section">
+                    <div class="api-title">⚖️ Compare Two Shoes</div>
+                    <label>Shoe A:</label>
+                    <select id="shoeA">
+                        <option value="SHOE001">SHOE001 - Classic Running Shoes</option>
+                        <option value="SHOE002">SHOE002 - Urban Casual Sneakers</option>
+                        <option value="SHOE003">SHOE003 - Professional Formal Shoes</option>
+                        <option value="SHOE004">SHOE004 - Athletic Sports Shoes</option>
+                        <option value="SHOE005">SHOE005 - Comfort Walking Shoes</option>
+                        <option value="SHOE006">SHOE006 - Marathon Running Shoes</option>
+                        <option value="SHOE007">SHOE007 - Casual Slip-On Shoes</option>
+                        <option value="SHOE008">SHOE008 - Casual Black Sneaker with Red Stripes</option>
+                        <option value="SHOE009">SHOE009 - Limited Edition Shoe</option>
+                    </select>
+                    <label>Shoe B:</label>
+                    <select id="shoeB">
+                        <option value="SHOE001">SHOE001 - Classic Running Shoes</option>
+                        <option value="SHOE002" selected>SHOE002 - Urban Casual Sneakers</option>
+                        <option value="SHOE003">SHOE003 - Professional Formal Shoes</option>
+                        <option value="SHOE004">SHOE004 - Athletic Sports Shoes</option>
+                        <option value="SHOE005">SHOE005 - Comfort Walking Shoes</option>
+                        <option value="SHOE006">SHOE006 - Marathon Running Shoes</option>
+                        <option value="SHOE007">SHOE007 - Casual Slip-On Shoes</option>
+                        <option value="SHOE008">SHOE008 - Casual Black Sneaker with Red Stripes</option>
+                        <option value="SHOE009">SHOE009 - Limited Edition Shoe</option>
+                    </select>
+                    <button onclick="testCompare()">Compare</button>
+                    <div id="compareResponse" class="response"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Order Flow Tests -->
+            <div class="panel">
+                <h2>Order & Change Flow</h2>
+
+                <div class="info-box">
+                    <strong>Quick Test:</strong> Place an order first (leave Order ID empty to auto-generate), then use the generated Order ID to test color change. Customer CUST001 (Golden Member) can change colors!
+                </div>
+
+                <!-- Place Order -->
+                <div class="api-section">
+                    <div class="api-title">🛍️ Place Order (COD)</div>
+                    <label>Order ID (optional - auto-generated if empty):</label>
+                    <input type="text" id="customerId" placeholder="e.g., ORD1001 (leave empty to auto-generate)">
+                    <label>Shoe ID:</label>
+                    <select id="shoeIdOrder">
+                        <option value="SHOE001">SHOE001 - Classic Running Shoes</option>
+                        <option value="SHOE002">SHOE002 - Urban Casual Sneakers</option>
+                        <option value="SHOE003">SHOE003 - Professional Formal Shoes</option>
+                        <option value="SHOE004">SHOE004 - Athletic Sports Shoes</option>
+                        <option value="SHOE005">SHOE005 - Comfort Walking Shoes</option>
+                        <option value="SHOE006">SHOE006 - Marathon Running Shoes</option>
+                        <option value="SHOE007">SHOE007 - Casual Slip-On Shoes</option>
+                        <option value="SHOE008">SHOE008 - Casual Black Sneaker with Red Stripes</option>
+                        <option value="SHOE009">SHOE009 - Limited Edition Shoe</option>
+                    </select>
+                    <label>Size:</label>
+                    <input type="number" id="orderSize" value="9" placeholder="e.g., 9">
+                    <label>Color:</label>
+                    <input type="text" id="orderColor" value="red" placeholder="e.g., red">
+                    <label>Payment Method:</label>
+                    <select id="paymentMethod">
+                        <option value="COD">Cash on Delivery (COD)</option>
+                        <option value="CARD">Credit/Debit Card</option>
+                    </select>
+                    <label>City:</label>
+                    <input type="text" id="orderCity" value="Chennai" placeholder="e.g., Chennai">
+                    <label>Phone:</label>
+                    <input type="text" id="orderPhone" value="+91-9876543210" placeholder="e.g., +91-9876543210">
+                    <button onclick="testOrder()">Place Order</button>
+                    <div id="orderResponse" class="response"></div>
+                </div>
+
+                <!-- Request Color Change -->
+                <div class="api-section">
+                    <div class="api-title">🎨 Request Color Change</div>
+                    <label>Order ID:</label>
+                    <input type="text" id="orderId" placeholder="e.g., ORD1001" value="ORD1001">
+                    <label>New Color:</label>
+                    <input type="text" id="newColor" placeholder="e.g., white" value="white">
+                    <button onclick="testColorChange()">Request Change</button>
+                    <div id="colorChangeResponse" class="response"></div>
+                </div>
+
+                <!-- Confirm Color & Shipping -->
+                <div class="api-section">
+                    <div class="api-title">✅ Confirm Change & Shipping</div>
+                    <label>Order ID:</label>
+                    <input type="text" id="confirmOrderId" placeholder="e.g., ORD1001" value="ORD1001">
+                    <label>New Color (from previous step):</label>
+                    <input type="text" id="confirmColor" placeholder="e.g., white" value="white">
+                    <button onclick="testConfirmChange()">Confirm Color</button>
+                    <div id="confirmResponse" class="response"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        function displayResponse(elementId, data, isError = false) {
+            const elem = document.getElementById(elementId);
+            elem.textContent = JSON.stringify(data, null, 2);
+            elem.className = isError ? 'response error' : 'response success';
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            try {
+                const res = await fetch(`${API_BASE}/shoes/search?query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                displayResponse('searchResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('searchResponse', { error: e.message }, true);
+            }
+        }
+
+        async function testShoeDetails() {
+            const shoeId = document.getElementById('shoeIdDetails').value;
+            try {
+                const res = await fetch(`${API_BASE}/shoes/${shoeId}`);
+                const data = await res.json();
+                displayResponse('detailsResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('detailsResponse', { error: e.message }, true);
+            }
+        }
+
+        async function testCompare() {
+            const shoeA = document.getElementById('shoeA').value;
+            const shoeB = document.getElementById('shoeB').value;
+            try {
+                const res = await fetch(`${API_BASE}/compare-or-order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'compare', shoe_id_a: shoeA, shoe_id_b: shoeB })
+                });
+                const data = await res.json();
+                displayResponse('compareResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('compareResponse', { error: e.message }, true);
+            }
+        }
+
+        async function testOrder() {
+            const orderId = document.getElementById('customerId').value;  // Can be empty
+            const shoeId = document.getElementById('shoeIdOrder').value;
+            const size = parseInt(document.getElementById('orderSize').value);
+            const color = document.getElementById('orderColor').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const city = document.getElementById('orderCity').value;
+            const phone = document.getElementById('orderPhone').value;
+
+            const payload = {
+                action: 'order',
+                shoe_id: shoeId,
+                size: size,
+                color: color,
+                shipping_address: {
+                    name: 'Customer Name',
+                    line1: '123 Main Street',
+                    line2: 'Apt 5',
+                    city: city,
+                    state: 'TN',
+                    pincode: '600001',
+                    phone: phone
+                },
+                payment_method: paymentMethod
+            };
+
+            // Only add order_id if provided
+            if (orderId) {
+                payload.order_id = orderId;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/compare-or-order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    // Auto-populate the order ID for next step
+                    document.getElementById('orderId').value = data.order_id;
+                    document.getElementById('confirmOrderId').value = data.order_id;
+                }
+                displayResponse('orderResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('orderResponse', { error: e.message }, true);
+            }
+        }
+
+        async function testColorChange() {
+            const orderId = document.getElementById('orderId').value;
+            const newColor = document.getElementById('newColor').value;
+
+            const payload = {
+                stage: 'request',
+                order_id: orderId,
+                new_color: newColor
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/order-change`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                displayResponse('colorChangeResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('colorChangeResponse', { error: e.message }, true);
+            }
+        }
+
+        async function testConfirmChange() {
+            const orderId = document.getElementById('confirmOrderId').value;
+            const newColor = document.getElementById('confirmColor').value;
+
+            const payload = {
+                stage: 'confirm_color',
+                order_id: orderId,
+                new_color: newColor
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/order-change`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                displayResponse('confirmResponse', data, !data.ok);
+            } catch (e) {
+                displayResponse('confirmResponse', { error: e.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>

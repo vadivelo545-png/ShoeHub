@@ -222,10 +222,15 @@ def is_golden_member(customer_id):
     cust = DB["customers"].get(customer_id)
     return cust and cust.get("membership", "").lower() == "golden"
 
+def find_shoe_id_by_name(name):
+    for shoe_id, shoe in DB["shoes"].items():
+        if shoe["name"].lower() == name.lower():
+            return shoe_id
+    return None
+
 def check_availability(shoe_id, color, size):
-    inv = DB["inventory"].get(shoe_id, {})
-    sizes = inv.get(color, {})
-    return bool(sizes.get(size, False))
+    inv = DB["inventory"].get(shoe_id, {}).get(color, {})
+    return inv.get(size, False)
 
 # ----------------------------
 # Static/Image & SPA Routes
@@ -277,7 +282,7 @@ def order_change():
     # Fetch order and shoe
     order = DB["orders"].get(order_id)
     if not order:
-        return jsonify({"ok": False, "error": "Order not found"}), 404
+        return jsonify({"ok": False, "error": "Order not found. Please provide a valid order id to proceed further."}), 404
 
     shoe = DB["shoes"].get(order["shoe_id"])
     if not shoe:
@@ -325,9 +330,11 @@ def order_change():
         final_address = current_address
 
     # Return complete success response
+    membership = DB["customers"].get(order["customer_id"], {}).get("membership", "Unknown")
     message = (
         f"Color change completed successfully!\n"
         f"Order ID: {order_id}\n"
+        f"Membership: {membership}\n"
         f"Shoe: {shoe['name']}\n"
         f"Color changed from {old_color} to {new_color}\n"
         f"Size: {order['size']}\n"
@@ -382,20 +389,38 @@ def search_shoes():
     results = []
     for shoe_id, shoe in DB["shoes"].items():
         if query in shoe["name"].lower() or query in shoe["brand"].lower():
-            results.append({"shoe_id": shoe_id, **shoe})
+            results.append({
+                "shoe_id": shoe_id,
+                "name": shoe["name"],
+                "brand": shoe["brand"],
+                "base_price": shoe["base_price"],
+                "discount_percent": shoe["discount_percent"],
+                "rating": shoe["rating"],
+                "colors": shoe["colors"],
+                "sizes": shoe["sizes"],
+                "materials": shoe["materials"],
+                "advantages": shoe["advantages"],
+                "description": shoe["description"]
+            })
     return jsonify({"ok": True, "results": results})
 
 # ----------------------------
 # (7 single) Shoe Details
 # ----------------------------
-@api.route('/shoes/<shoe_id>', methods=['GET'])
-def shoe_details(shoe_id):
-    shoe = DB["shoes"].get(shoe_id)
-    if not shoe:
+@api.route('/shoes/details', methods=['GET'])
+def shoe_details():
+    name = request.args.get('name')
+    if not name:
+        return jsonify({"ok": False, "error": "name parameter is required"}), 400
+    
+    shoe_id = find_shoe_id_by_name(name)
+    if not shoe_id:
         return jsonify({"ok": False, "error": "Shoe not found"}), 404
     
-    # Get base price in USD (convert from INR by dividing by ~83)
-    base_price_usd = round(shoe["base_price"] / 83, 2)
+    shoe = DB["shoes"].get(shoe_id)
+    
+    # Get base price in USD (convert from INR by dividing by 100)
+    base_price_usd = round(shoe["base_price"] / 100, 2)
     discounted_price_usd = round(base_price_usd * (100 - shoe["discount_percent"]) / 100, 2)
     
     # Return shoe details without image
@@ -429,15 +454,18 @@ def compare_or_order():
     action = (data.get("action") or "").strip().lower()
 
     if action == "compare":
-        a_id = data.get("shoe_id_a")
-        b_id = data.get("shoe_id_b")
+        a_name = data.get("shoe_name_a")
+        b_name = data.get("shoe_name_b")
+        if not a_name or not b_name:
+            return jsonify({"ok": False, "error": "shoe_name_a and shoe_name_b are required"}), 400
+
+        a_id = find_shoe_id_by_name(a_name)
+        b_id = find_shoe_id_by_name(b_name)
         if not a_id or not b_id:
-            return jsonify({"ok": False, "error": "shoe_id_a and shoe_id_b are required"}), 400
+            return jsonify({"ok": False, "error": "Shoe name(s) not found"}), 404
 
         a = DB["shoes"].get(a_id)
         b = DB["shoes"].get(b_id)
-        if not a or not b:
-            return jsonify({"ok": False, "error": "Shoe ID(s) not found"}), 404
 
         a_price = price_after_discount(a)
         b_price = price_after_discount(b)
@@ -476,9 +504,10 @@ def compare_or_order():
         size = data.get("size")
         shipping_address = data.get("shipping_address")
         payment_method = (data.get("payment_method") or "COD").upper()
+        customer_id = data.get("customer_id")
 
-        if not all([shoe_id, color, size, shipping_address]):
-            return jsonify({"ok": False, "error": "shoe_id, color, size, shipping_address are required"}), 400
+        if not all([shoe_id, color, size, shipping_address, customer_id]):
+            return jsonify({"ok": False, "error": "shoe_id, color, size, shipping_address, customer_id are required"}), 400
         if payment_method not in ["COD", "CARD"]:
             return jsonify({"ok": False, "error": "Payment method must be COD or CARD"}), 400
 
@@ -496,9 +525,6 @@ def compare_or_order():
         if not order_id:
             next_id_num = 1000 + len(DB["orders"]) + 1
             order_id = f"ORD{next_id_num}"
-        
-        # Use CUST001 (Golden Member) by default for demo
-        customer_id = data.get("customer_id", "CUST001")
         
         DB["orders"][order_id] = {
             "customer_id": customer_id,

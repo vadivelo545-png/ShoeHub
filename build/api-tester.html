@@ -279,24 +279,15 @@
 
                 <!-- Request Color Change -->
                 <div class="api-section">
-                    <div class="api-title">🎨 Request Color Change</div>
+                    <div class="api-title">🎨 Change Order Color (Auto-Process)</div>
                     <label>Order ID:</label>
                     <input type="text" id="orderId" placeholder="e.g., ORD1001" value="ORD1001">
                     <label>New Color:</label>
                     <input type="text" id="newColor" placeholder="e.g., white" value="white">
-                    <button onclick="testColorChange()">Request Change</button>
+                    <label>New Address (optional - leave empty to keep current):</label>
+                    <textarea id="newAddress" placeholder="Paste JSON address object if you want to change shipping address"></textarea>
+                    <button onclick="testColorChange()">Process Color Change</button>
                     <div id="colorChangeResponse" class="response"></div>
-                </div>
-
-                <!-- Confirm Color & Shipping -->
-                <div class="api-section">
-                    <div class="api-title">✅ Confirm Change & Shipping</div>
-                    <label>Order ID:</label>
-                    <input type="text" id="confirmOrderId" placeholder="e.g., ORD1001" value="ORD1001">
-                    <label>New Color (from previous step):</label>
-                    <input type="text" id="confirmColor" placeholder="e.g., white" value="white">
-                    <button onclick="testConfirmChange()">Confirm Color</button>
-                    <div id="confirmResponse" class="response"></div>
                 </div>
             </div>
         </div>
@@ -401,12 +392,22 @@
         async function testColorChange() {
             const orderId = document.getElementById('orderId').value;
             const newColor = document.getElementById('newColor').value;
+            const newAddressText = document.getElementById('newAddress').value.trim();
 
             const payload = {
-                stage: 'request',
                 order_id: orderId,
                 new_color: newColor
             };
+
+            // If new address is provided, parse and include it
+            if (newAddressText) {
+                try {
+                    payload.new_address = JSON.parse(newAddressText);
+                } catch (e) {
+                    displayResponse('colorChangeResponse', { error: "Invalid JSON in new address field" }, true);
+                    return;
+                }
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/order-change`, {
@@ -418,29 +419,6 @@
                 displayResponse('colorChangeResponse', data, !data.ok);
             } catch (e) {
                 displayResponse('colorChangeResponse', { error: e.message }, true);
-            }
-        }
-
-        async function testConfirmChange() {
-            const orderId = document.getElementById('confirmOrderId').value;
-            const newColor = document.getElementById('confirmColor').value;
-
-            const payload = {
-                stage: 'confirm_color',
-                order_id: orderId,
-                new_color: newColor
-            };
-
-            try {
-                const res = await fetch(`${API_BASE}/order-change`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                displayResponse('confirmResponse', data, !data.ok);
-            } catch (e) {
-                displayResponse('confirmResponse', { error: e.message }, true);
             }
         }
     </script>

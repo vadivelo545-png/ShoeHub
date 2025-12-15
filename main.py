@@ -393,7 +393,27 @@ def shoe_details(shoe_id):
     shoe = DB["shoes"].get(shoe_id)
     if not shoe:
         return jsonify({"ok": False, "error": "Shoe not found"}), 404
-    return jsonify({"ok": True, "shoe_id": shoe_id, "details": shoe, "price_after_discount": price_after_discount(shoe)})
+    
+    # Get base price in USD (convert from INR by dividing by ~83)
+    base_price_usd = round(shoe["base_price"] / 83, 2)
+    discounted_price_usd = round(base_price_usd * (100 - shoe["discount_percent"]) / 100, 2)
+    
+    # Return shoe details without image
+    return jsonify({
+        "ok": True,
+        "shoe_id": shoe_id,
+        "name": shoe["name"],
+        "brand": shoe["brand"],
+        "description": shoe["description"],
+        "materials": shoe["materials"],
+        "advantages": shoe["advantages"],
+        "colors": shoe["colors"],
+        "sizes": shoe["sizes"],
+        "rating": shoe["rating"],
+        "base_price": f"${base_price_usd:.2f}",
+        "discount_percent": shoe["discount_percent"],
+        "price_after_discount": f"${discounted_price_usd:.2f}"
+    })
 
 # ----------------------------
 # (8 & 9 combined) Compare or Order
